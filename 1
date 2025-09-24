@@ -1,5 +1,4 @@
-def list_to_pow(nums, power):
-    """ Возводит все элементы списка целых чисел в целую степень
+""" Возводит все элементы списка целых чисел в целую степень
     
     Аргументы:
         - nums:list - список целых чисел
@@ -12,11 +11,13 @@ def list_to_pow(nums, power):
         - используйте map и lambda
         - авторское решение занимает 40 символов
     """
-    # return [x**pow for x in nums]
+def list_to_pow(nums, power):
     return list(map(lambda x: pow(x, power), nums))
 
-def naive_encoder(n):
-    """ Вычисляет n + nn + nnn для данного n. Например,
+
+
+
+""" Вычисляет n + nn + nnn для данного n. Например,
         для n = 10 вычисляет 10 + 1010 + 101010
     
     Аргументы:
@@ -29,11 +30,12 @@ def naive_encoder(n):
         - используйте преобразование типов int и str друг в друга
         - авторское решение занимает 40 символов
     """
-    res = (n + int(str(n)*2) + int(str(n)*3))
-    return res
+def naive_encoder(n):
+    return (n + int(str(n)*2) + int(str(n)*3))
 
 
-def fibonacci_nth(n):
+
+
     """ Вычисляет n-е число Фибоначчи
     
     Аргументы:
@@ -47,14 +49,17 @@ def fibonacci_nth(n):
         - используйте множественное присваивание, например: a, b = 1, 1
         - авторское решение занимает 6 строк
     """
+def fibonacci_nth(n):
     a, b = 0, 1
-    for _ in range(n):
+    for _ in range(n-1): #Не используем счётчик
         a, b = b, a + b
     return a
+"""
+0 1 1 2 3 5 8 13
+"""
 
 
-def clip_list(objl, a_min, a_max):
-    """ Проверяет, что объекты списка objl находятся в диапазоне значений [a_min, a_max]
+""" Проверяет, что объекты списка objl находятся в диапазоне значений [a_min, a_max]
         Если элемент списка меньше a_min, то его значение меняется на a_min.
         Если элемент списка больше a_max, то его значение меняется на a_max.
 
@@ -74,17 +79,17 @@ def clip_list(objl, a_min, a_max):
         - способ 2:
             - функцию map и lambda-функцию
             - авторское решение занимает 59 символа
-    """
-    # res = []
-    # for x in objl:
-    #     if x < a_min: x = a_min
-    #     if x > a_max: x = a_max
-    #     res.append(x)
-    # return res
+ """
+def clip_list(objl, a_min, a_max):
     return [max(a_min, min(x, a_max)) for x in objl]
+    #                   если больше чем мкасимум, то обрезается
+    #       если меньше минимума, то обрезается
 
-def input_to_list():
-    """ Запрашивает список целых чисел через стандартный поток в формате
+
+
+
+"""
+Запрашивает список целых чисел через стандартный поток в формате
         "n1, n2, n3, ..., ni", i >= 0, и преобразует его в список целых чисел
 
     Аргументы: отсутствуют
@@ -98,15 +103,19 @@ def input_to_list():
         - используйте функцию input и метод split типа str
         - используйте оператор in для поиска по строке
         - авторское решение занимает 6 строк
-    """
+"""  
+def input_to_list():
     lst = input()
-    if ',' not in lst and lst.strip() == '': return []
+    if ',' not in lst and lst.strip() == '': return [] #Нет запятых и после удаления пробелов пусто, то вернуть пусто
     nums = lst.split(',')
-    return [int(x.strip()) for x in nums]
+    print(nums)
+    return list(map(int,nums))
 
 
-def income_by_client(records):
-    """ Подсчитывает поступления от каждого клиента по списку всех поступлений
+
+
+
+""" Подсчитывает поступления от каждого клиента по списку всех поступлений
 
     Аргументы:
         - records: список (list) кортежей (tuple). Каждый кортеж состоит из
@@ -120,7 +129,8 @@ def income_by_client(records):
 
     Указания:
         - авторское решение занимает 7 строк
-    """
+"""
+def income_by_client(records):
     res = {}
     for person, summ in records:
         if person in res:
@@ -129,8 +139,10 @@ def income_by_client(records):
             res[person] = summ
     return res
 
-def add_prefix(str_list, pref):
-    """ Добавляет префикс к каждой строке из списка. Строки, которые уже начинаются
+
+
+
+""" Добавляет префикс к каждой строке из списка. Строки, которые уже начинаются
         с нужного префикса, не изменяются
 
     Аргументы:
@@ -149,12 +161,15 @@ def add_prefix(str_list, pref):
         - способ 2:
             - используйте list comprehension
             - авторское решение занимает 74 символа
-    """
+"""
+def add_prefix(str_list, pref):
     x = [x if x.startswith(pref) else (pref + str(x)) for x in str_list]
     return x
 
 
-def hide_secrets(recodrs):
+
+
+
     """ Возвращает копию списка строк recodrs, из которого удалены все строки,
         содержащие `secret` в любой комбинации строчных и заглавных символов
         (например, `sEcReT` не должен проходить фильтр)
@@ -171,10 +186,14 @@ def hide_secrets(recodrs):
         - используйте метод casefold или метод lower класса str
         - авторское решение занимает 68 символа
     """
-    res = list(filter(lambda x: 'secret' not in x.lower(), recodrs))
+def hide_secrets(recodrs):
+    res = list(filter(lambda x: 'secret' not in x.lower(), recodrs)) #оставляет что вернуло 1 при отуствии секрета после перевода в нижний регистр
     return res
 
-def is_same_type(objlist):
+
+
+
+
     """ Возвращает True, если все объекты списка являются объектами одного типа
         и False, если список содержит хотя бы два объекта разных типов.
 
@@ -188,17 +207,19 @@ def is_same_type(objlist):
         - используйте встроенную функцию type
         - авторское решение занимает 39 символов
     """
-    if len(objlist) == 0: return True
-
-    init = objlist[0]
-    for x in objlist:
-        if type(init) != type(x):
-            return False
+def is_same_type(objlist):
+    # if len(objlist) == 0: return True #23
+ 
+    for x in objlist: #11
+        if type(objlist[0]) != type(x):#23
+            return False #12
     return True
 
 
-def file_to_str_list(path):
-    """ Возвращает содержимое текстового файла в виде списка строк.
+
+
+
+""" Возвращает содержимое текстового файла в виде списка строк.
         Каждая строка соответствует строке файла
 
     Аргументы:
@@ -211,7 +232,8 @@ def file_to_str_list(path):
         - используйте функцию open, чтобы открыть файл
         - файловый объект - итерируемый. Итерирование происходит по строкам
         - авторское решение занимает 35 символов
-    """
+"""
+def file_to_str_list(path):
     with open(path, 'r') as f:
         filo = f.readlines()
     return filo
