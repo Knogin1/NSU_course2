@@ -1,0 +1,101 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+
+
+def rvec(x1,x2,y1,y2):
+    q = [0]*2
+    
+    q[0] = x2 - x1 
+    q[1] = y2 - y1
+    
+    absq = np.sqrt(q[0]*q[0] + q[1]*q[1]) 
+
+    q[0] = q[0]/absq
+    q[1] = q[1]/absq
+    return q
+
+def connect(a,b):
+    c = np.zeros([len(a),2])
+    for i in range(0,len(a)):
+        c[i][0] = a[i]
+        c[i][1] = b[i]
+    return(c)
+
+def update(arr):
+    new_x = arr[0]
+    new_y = arr[1]
+    print(new_x)
+    print(new_y)
+    print("\n")
+    point.set_data([new_x],[new_y])
+    return point,
+        
+
+'''A = [1,2,3,4,5,6]
+B = [6,6,5,4,3,2]
+print(connect(A,B))'''
+
+a = 10
+
+#t = np.linspace(0, 10, 10) #от 0 до 2пи 1000 чисел
+fig = plt.figure(figsize=(a,a)) #Холст (Длина, ширина)
+
+dt = 0.001
+size = int((a/dt))
+
+d1 = np.zeros([2,size])
+d2 = np.zeros([2,size])
+d3 = np.zeros([2,size])
+d4 = np.zeros([2,size])
+
+d1[:,0] = [-a,-a]
+d2[:,0] = [-a,a]
+d3[:,0] = [a,a]
+d4[:,0] = [a,-a]
+
+#    y,номер
+#d1 [1,2] = 7
+v = 0.01
+
+r = [0]*2
+e = [0]*2
+
+for i in range(size-1):
+    e = rvec(d1[0,i], d2[0,i], d1[1,i], d2[1,i])
+    d1[0,i+1] = d1[0,i] + e[0]*v
+    d1[1,i+1] = d1[1,i] + e[1]*v
+
+    e = rvec(d2[0,i], d3[0,i], d2[1,i], d3[1,i])
+    d2[0,i+1] = d2[0,i] + e[0]*v
+    d2[1,i+1] = d2[1,i] + e[1]*v
+    
+    
+    e = rvec(d3[0,i], d4[0,i], d3[1,i], d4[1,i])
+    d3[0,i+1] = d3[0,i] + e[0]*v
+    d3[1,i+1] = d3[1,i] + e[1]*v
+
+    e = rvec(d4[0,i], d1[0,i], d4[1,i], d1[1,i])
+    d4[0,i+1] = d4[0,i] + e[0]*v
+    d4[1,i+1] = d4[1,i] + e[1]*v
+    
+plt.plot(d1[0],d1[1])
+plt.plot(d2[0],d2[1])
+plt.plot(d3[0],d3[1])
+plt.plot(d4[0],d4[1])
+
+#print(d1)
+dl = connect(d1[0],d1[1])
+#print(dl[0])
+
+point, = plt.plot(d1[0,0], d1[1,0], 'o')
+anym = FuncAnimation(fig, update, interval = 0.00001, blit = True, repeat = True, frames = dl)
+
+#plt.scatter(d1[0],d1[1],c="black")
+plt.show()
+
+
+'''
+
+
+'''
