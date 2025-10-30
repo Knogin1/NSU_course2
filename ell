@@ -1,0 +1,109 @@
+import matplotlib.pyplot as plt
+import numpy as np
+
+'''
+def E(q_p, xs, ys): #q_p=[[xq1, yq1, q1], [xq2, yq2, q2] ... ] 
+    Ex=0
+    Ey=0
+    #c=0
+    for c in range(len(q_p)):#проходимся по всем зарядам в массиве вычисляем проекции напряженности в заданной точке и обновляем значение результирующей напряженности
+        q=q_p[c]
+        r=((xs-q[0])**2+(ys-q[1])**2)**0.5
+        dEv=(q[2])/(r**2)
+        dEx=(xs-q[0])*(dEv/r)
+        dEy=(ys-q[1])*(dEv/r)
+
+        Ex+=dEx
+        Ey+=dEy
+    return np.array([Ex, Ey])
+'''
+
+def Ex(q_p, xs, ys): #q_p=[[xq1, yq1, q1], [xq2, yq2, q2] ... ] 
+    Ex=0
+    for c in range(len(q_p)):#проходимся по всем зарядам в массиве вычисляем проекции напряженности в заданной точке и обновляем значение результирующей напряженности
+        q=q_p[c]
+        r=((xs-q[0])**2+(ys-q[1])**2)**0.5
+        dEv=(q[2])/(r**2)
+        dEx=(xs-q[0])*(dEv/r)
+
+        Ex+=dEx
+    return Ex
+
+def Ey(q_p, xs, ys): #q_p=[[xq1, yq1, q1], [xq2, yq2, q2] ... ] 
+    Ey=0
+    for c in range(len(q_p)):#проходимся по всем зарядам в массиве вычисляем проекции напряженности в заданной точке и обновляем значение результирующей напряженности
+        q=q_p[c]
+        r=((xs-q[0])**2+(ys-q[1])**2)**0.5
+        dEv=(q[2])/(r**2)
+        dEy=(ys-q[1])*(dEv/r)
+
+        Ey+=dEy
+    return Ey
+
+Q = np.array([[0,0,0],[1,1,1]])
+print(len(Q))
+
+
+
+#Сетка      (От до на сколько разбить )
+
+x = np.linspace(0, 100, 100)
+y = np.linspace(0, 100, 100)
+z = np.linspace(0, 100, 100)
+
+X, Y, Z = np.meshgrid(x, y, z, indexing='ij')
+
+'''
+[[[[0. 0. 0.]
+   [0. 0. 0.]
+   [0. 0. 0.]]
+
+  [[0. 0. 0.]
+   [0. 0. 0.]
+   [0. 0. 0.]]]]
+'''
+
+E = np.zeros((100, 100, 100, 3))
+print(E)
+
+#A = E(Q,2,2)
+'''
+print(A)
+print(A.shape)
+print((A[0]**2 + A[1]**2)**0.5)
+'''
+'''
+E_m = np.zeros((len(X),2))
+#print (E_m)
+for i in range(2):
+    for j in range(len(X)):
+        E_m[j][i] = E(Q,X[j],Y[j])
+'''
+
+# Вектор (U,V)
+
+U = -1 - X**2 + Y
+V = 1 + X - Y**2
+'''
+E_m = np.zeros((2,len(X)))
+for i in range(len(X)):
+    E_m
+print(E_m)
+
+
+U = E_m[0]
+V = Y+X
+'''
+
+# Поток     (Сетка , Компоненты скорости)
+plt.streamplot(X, Y, U, V)
+
+
+# Add labels and title
+plt.xlabel('X-axis')
+plt.ylabel('Y-axis')
+plt.title('Streamplot of a Vector Field')
+
+
+# Display the plot
+plt.show()
