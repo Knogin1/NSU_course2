@@ -1,0 +1,23 @@
+import numpy as np
+
+O1 = np.array([0,0,0,1])
+O2 = np.array([-1,0,0,1])
+
+O = np.vstack((O1[:3],O2[:3]))
+
+Op = O[1]-O[0]
+d = np.linalg.norm(Op)
+a = (O1[2]**2 - O2[2]**2 + d**2)/(2*d)
+Ot = O[0]+(a/d)*Op
+
+
+if d>(O1[3]+O2[3]) or d<abs(O1[3]-O2[3]):
+    print("Не пересекается")
+elif d == (O1[3]+O2[3]):
+    print(Ot)
+else:
+    P=(d+O1[3]+O2[3])/2
+    S = np.sqrt(P*(P-O1[3])*(P-O2[3])*(P-d))
+    h = 2*S/d
+    print(Ot)
+    print(h)
