@@ -1,0 +1,86 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+def decorrelate(xy):
+    # Вычисляем средние значения и стандартные отклонения
+    mean_x = np.mean(xy[:, 0])
+    mean_y = np.mean(xy[:, 1])
+    std_x = np.std(xy[:, 0])
+    std_y = np.std(xy[:, 1])
+    
+    # Нормализуем данные
+    x_norm = (xy[:, 0] - mean_x) / std_x
+    y_norm = (xy[:, 1] - mean_y) / std_y
+    normalized = np.column_stack((x_norm, y_norm))
+    
+    # Матрица поворота на π/4
+    theta = np.pi / 4
+    cos_theta = np.cos(theta)
+    sin_theta = np.sin(theta)
+    rotation_matrix = np.array([[cos_theta, -sin_theta],
+                                [sin_theta, cos_theta]])
+    
+    # Применяем поворот
+    xieta = normalized @ rotation_matrix.T
+
+    # Определяем прямую трансформацию
+    def direct(xy_input):
+        x_norm_d = (xy_input[:, 0] - mean_x) / std_x
+        y_norm_d = (xy_input[:, 1] - mean_y) / std_y
+        normalized_d = np.column_stack((x_norm_d, y_norm_d))
+        return normalized_d @ rotation_matrix.T
+    
+    # Определяем обратную трансформацию
+    def inverse(xieta_input):
+        # Обратный поворот (транспонированная матрица)
+        normalized_i = xieta_input @ rotation_matrix
+        x_orig = normalized_i[:, 0] * std_x + mean_x
+        y_orig = normalized_i[:, 1] * std_y + mean_y
+        return np.column_stack((x_orig, y_orig))
+    
+    return (xieta, direct, inverse)
+
+
+def plot(data, new_data):
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
+    
+    # Первая диаграмма - исходные данные
+    ax1.scatter(data[:, 0], data[:, 1])
+    ax1.set_xlabel('x')
+    ax1.set_ylabel('y')
+    ax1.set_title('Исходные данные')
+    ax1.grid(True)
+    
+    # Вторая диаграмма - преобразованные данные
+    ax2.scatter(new_data[:, 0], new_data[:, 1])
+    ax2.set_xlabel('xi')
+    ax2.set_ylabel('eta')
+    ax2.set_title('Преобразованные данные')
+    ax2.grid(True)
+    
+    plt.tight_layout()
+    plt.savefig('scatter.png')
+    plt.close()
+
+'''
+# Создаем тестовые данные
+N = 100
+x = np.random.normal(0, 1, N)
+y = x + np.random.normal(0, 0.5, N)  # Создаем корреляцию
+xy = np.column_stack((x, y))
+
+# Применяем преобразование
+xieta, direct, inverse = decorrelate(xy)
+
+# Проверяем корреляцию после преобразования
+correlation = np.corrcoef(xieta[:, 0], xieta[:, 1])[0, 1]
+print(f"Корреляция после преобразования: {correlation:.2e}")
+
+# Проверяем обратимость преобразования
+xy_reconstructed = inverse(xieta)
+reconstruction_error = np.max(np.abs(xy - xy_reconstructed))
+print(f"Ошибка восстановления: {reconstruction_error:.2e}")
+
+plot(xy,xieta)
+'''
