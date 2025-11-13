@@ -1,0 +1,173 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+def calculate_electric_field(charges, positions, grid_shape, grid_spacing=1.0):
+    """
+    Вычисляет электрическое поле на трехмерной сетке от системы точечных зарядов.
+
+    Параметры:
+    ----------
+    charges : array_like
+        Массив зарядов [q1, q2, ..., qn]
+    positions : array_like
+        Массив позиций зарядов формы (n, 3) [[x1, y1, z1], [x2, y2, z2], ...]
+    grid_shape : tuple
+        Форма сетки (nx, ny, nz)
+    grid_spacing : float, optional
+        Расстояние между узлами сетки (по умолчанию 1.0)
+
+    Возвращает:
+    -----------
+    E_field : ndarray
+        Трехмерное электрическое поле формы (nx, ny, nz, 3)
+        где последняя ось содержит компоненты (Ex, Ey, Ez)
+    """
+
+    # Электрическая постоянная (Ф/м)
+    epsilon_0 = 8.854187817e-12
+
+    # Создаем координатную сетку
+    nx, ny, nz = grid_shape
+    x = np.linspace(0, (nx - 1) * grid_spacing, nx)
+    y = np.linspace(0, (ny - 1) * grid_spacing, ny)
+    z = np.linspace(0, (nz - 1) * grid_spacing, nz)
+
+    X, Y, Z = np.meshgrid(x, y, z, indexing='ij')
+
+    # Инициализируем поле
+    E_field = np.zeros((nx, ny, nz, 3))
+
+    # Преобразуем входные данные в массивы numpy
+    charges = np.asarray(charges)
+    positions = np.asarray(positions)
+
+    # Вычисляем вклад каждого заряда
+    for q, pos in zip(charges, positions):
+        # Векторы от заряда к точкам сетки
+        R_x = X - pos[0]
+        R_y = Y - pos[1]
+        R_z = Z - pos[2]
+
+        # Расстояния от заряда до точек сетки
+        R = np.sqrt(R_x ** 2 + R_y ** 2 + R_z ** 2)
+
+        # Избегаем деления на ноль (в позиции заряда)
+        R = np.where(R < 1e-10, np.inf, R)
+
+        # Единичные векторы направления
+        R_hat_x = R_x / R
+        R_hat_y = R_y / R
+        R_hat_z = R_z / R
+
+        # Электрическое поле от одного заряда (закон Кулона)
+        E_magnitude = q / (4 * np.pi * epsilon_0 * R ** 2)
+
+        # Компоненты поля
+        E_field[..., 0] += E_magnitude * R_hat_x
+        E_field[..., 1] += E_magnitude * R_hat_y
+        E_field[..., 2] += E_magnitude * R_hat_z
+
+    return E_field
+
+
+# Альтернативная версия с векторизованными вычислениями (быстрее для большого числа зарядов)
+def calculate_electric_field_vectorized(charges, positions, grid_shape, grid_spacing=1.0):
+    """
+    Векторизованная версия для большей производительности.
+    """
+    epsilon_0 = 8.854187817e-12
+
+    nx, ny, nz = grid_shape
+    x = np.linspace(0, (nx - 1) * grid_spacing, nx)
+    y = np.linspace(0, (ny - 1) * grid_spacing, ny)
+    z = np.linspace(0, (nz - 1) * grid_spacing, nz)
+
+    X, Y, Z = np.meshgrid(x, y, z, indexing='ij')
+    grid_points = np.stack([X, Y, Z], axis=-1)  # форма (nx, ny, nz, 3)
+
+    charges = np.asarray(charges)
+    positions = np.asarray(positions)
+
+    E_field = np.zeros((nx, ny, nz, 3))
+
+    for i in range(len(charges)):
+        q = charges[i]
+        pos = positions[i]
+
+        # Векторы от заряда ко всем точкам сетки
+        R_vec = grid_points - pos  # форма (nx, ny, nz, 3)
+
+        # Расстояния
+        R = np.linalg.norm(R_vec, axis=-1)
+        R = np.where(R < 1e-10, np.inf, R)
+
+        # Единичные векторы
+        R_hat = R_vec / R[..., np.newaxis]
+
+        # Поле от заряда
+        E_magnitude = q / (4 * np.pi * epsilon_0 * R ** 2)
+
+        E_field += E_magnitude[..., np.newaxis] * R_hat
+
+    return E_field
+
+
+# Пример использования
+if __name__ == "__main__":
+    # Параметры сетки
+    grid_shape = (6, 6, 6)
+    grid_spacing = 1  # 10 см между узлами
+
+    # Два точечных заряда
+    charges = [1e-9, -1e-9]  # +1 нКл и -1 нКл
+    positions = [[1.0, 1.0, 1.0], [2.0, 2.0, 2.0]]  # координаты в метрах
+
+    # Вычисляем поле
+    E_field = calculate_electric_field(charges, positions, grid_shape, grid_spacing)
+
+    print(f"Форма поля: {E_field.shape}")
+    print(f"Максимальная компонента Ex: {np.max(E_field[..., 0]):.2e} В/м")
+    print(f"Максимальная компонента Ey: {np.max(E_field[..., 1]):.2e} В/м")
+    print(f"Максимальная компонента Ez: {np.max(E_field[..., 2]):.2e} В/м")
+
+    # Можно также вычислить модуль поля
+    E_magnitude = np.linalg.norm(E_field, axis=-1)
+    print(f"Максимальный модуль поля: {np.max(E_magnitude):.2e} В/м")
+
+
+    nx, ny, nz = grid_shape
+    x = np.linspace(0, (nx - 1) * grid_spacing, nx)
+    y = np.linspace(0, (ny - 1) * grid_spacing, ny)
+    z = np.linspace(0, (nz - 1) * grid_spacing, nz)
+
+    X, Y = np.meshgrid(x, y)
+    #Ex,Ey = np.meshgrid()
+
+   
+    #grid_points = np.stack([X, Y, Z], axis=-1)  # форма (nx, ny, nz, 3)
+    grid_points = np.stack([X, Y], axis=-1)  # форма (nx, ny, nz, 3)
+    
+    #ax = plt.figure().add_subplot(projection='3d')
+
+    # Make the grid
+    '''
+    x, y, z = np.meshgrid(np.arange(-0.8, 1, 0.2),
+                      np.arange(-0.8, 1, 0.2),
+                      np.arange(-0.8, 1, 0.8))
+    '''
+    '''
+    # Make the direction data for the arrows
+    u = 
+    v = 
+    w = 
+    '''
+    #ax.scatter(positions[1], marker='o', c='red') 
+    #plt.plot(positions[1],'o')
+    #plt.plot(positions[0],'o')
+    
+    #ax.quiver(grid_points[..., 0], grid_points[..., 1], grid_points[..., 2], E_field[..., 0], E_field[..., 1], E_field[..., 2], length=0.5, normalize=True)
+    plt.streamplot(X, Y, E_field[..., 0], E_field[..., 1])
+    
+
+    plt.show()
+    
