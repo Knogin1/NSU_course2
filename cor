@@ -1,0 +1,122 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+
+
+def decorrelate(xy):
+    # Вычисляем средние значения и стандартные отклонения
+    mean_x = np.mean(xy[:, 0])
+    mean_y = np.mean(xy[:, 1])
+    std_x = np.std(xy[:, 0])
+    std_y = np.std(xy[:, 1])
+
+    
+    # Нормализуем данные
+    x_norm = (xy[:, 0] - mean_x) / std_x
+    y_norm = (xy[:, 1] - mean_y) / std_y
+    normalized = np.column_stack((x_norm, y_norm))
+    
+    # Матрица поворота на π/4
+    theta = np.pi / 4
+    cos_theta = np.cos(theta)
+    sin_theta = np.sin(theta)
+    rotation_matrix = np.array([[cos_theta, -sin_theta],
+                                [sin_theta, cos_theta]])
+    
+    # Применяем поворот
+    xieta = normalized @ rotation_matrix.T
+
+    # Определяем прямую трансформацию
+    def direct(xy_input):
+        x_norm_d = (xy_input[:, 0] - mean_x) / std_x
+        y_norm_d = (xy_input[:, 1] - mean_y) / std_y
+        normalized_d = np.column_stack((x_norm_d, y_norm_d))
+        return normalized_d @ rotation_matrix.T
+    
+    # Определяем обратную трансформацию
+    def inverse(xieta_input):
+        # Обратный поворот (транспонированная матрица)
+        normalized_i = xieta_input @ rotation_matrix
+        x_orig = normalized_i[:, 0] * std_x + mean_x
+        y_orig = normalized_i[:, 1] * std_y + mean_y
+        return np.column_stack((x_orig, y_orig))
+    
+    return (xieta, direct, inverse)
+
+
+def plot(data, new_data):
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
+    
+    '''
+    mean_x = np.mean(xy[:, 0])
+    mean_y = np.mean(xy[:, 1])
+    X = (xy[:, 0] - mean_x) 
+    Y = (xy[:, 1] - mean_y)
+    K = np.multiply.outer(X, Y)
+    #eigenvalues, eigenvectors = np.linalg.eig(A)
+    e1,e = np.linalg.eig(K)
+    e1 = np.sqrt(e1)
+    e = e/e1
+    #print(e)
+    
+    '''
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(data)
+
+    pca = PCA() # или n_components=3 для 3D
+    print(pca.components_)
+    print(pca)
+    principal_components = pca.fit_transform(X_scaled)
+    #print(principal_components[:, 0])
+    en1, ev1 = np.linalg.eig(principal_components)
+    #print(ev1)
+    '''
+    '''
+    en1 = np.sqrt(en1)
+    ev1[0] = ev1[0] / en1
+   # ev2 /= np.sqrt(en2)
+    
+    
+    plt.figure(figsize=(8, 6))
+    plt.scatter(principal_components[:, 0], principal_components[:, 1])
+    plt.xlabel('Первая главная компонента')
+    plt.ylabel('Вторая главная компонента')
+    plt.title('Визуализация данных после PCA')
+    plt.grid(True)
+
+    #print(principal_components[:, 0])
+    #print( principal_components[:, 1])
+
+        
+    # Первая диаграмма - исходные данные
+    ax1.scatter(data[:, 0], data[:, 1])
+    ax1.set_xlabel('x')
+    ax1.set_ylabel('y')
+    ax1.set_title('Исходные данные')
+    ax1.grid(True)
+    
+    # Вторая диаграмма - преобразованные данные
+    ax2.scatter(new_data[:, 0], new_data[:, 1])
+    ax2.set_xlabel('xi')
+    ax2.set_ylabel('eta')
+    ax2.set_title('Преобразованные данные')
+    ax2.grid(True)
+    
+    plt.tight_layout()
+    plt.savefig('scatter.png')
+    #plt.close()
+    plt.show()
+
+
+# Создаем тестовые данные
+N = 100
+x = np.random.normal(0, 1, N)
+y = x + np.random.normal(0, 0.5, N)  # Создаем корреляцию
+xy = np.column_stack((x, y))
+
+# Применяем преобразование
+xieta, direct, inverse = decorrelate(xy)
+
+plot(xy,xieta)
+
