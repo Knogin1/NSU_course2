@@ -1,0 +1,146 @@
+#include <iostream>
+#include <vector>
+#include <cmath>
+#include <algorithm>
+#include <windows.h>
+
+
+using namespace std;
+
+const double EPS = 1e-9;
+
+struct Point {
+    double x, y;
+    Point(double x = 0, double y = 0) : x(x), y(y) {}
+};
+
+// Проверяет, совпадают ли две точки
+bool points_equal(const Point& a, const Point& b) {
+    return fabs(a.x - b.x) < EPS && fabs(a.y - b.y) < EPS;
+}
+
+// Находит отражение точки p относительно прямой через точки a и b
+Point reflect_point(const Point& p, const Point& a, const Point& b) {
+    // Прямая: a + t*(b-a)
+    Point dir = {b.x - a.x, b.y - a.y};
+
+    // Если точки a и b совпадают, вернем исходную точку
+    if (fabs(dir.x) < EPS && fabs(dir.y) < EPS) return p;
+
+    // Вектор от a до p
+    Point ap = {p.x - a.x, p.y - a.y};
+
+    // Проекция ap на dir
+    double t = (ap.x * dir.x + ap.y * dir.y) / (dir.x * dir.x + dir.y * dir.y);
+
+    // Точка на прямой, ближайшая к p
+    Point closest = {a.x + t * dir.x, a.y + t * dir.y};
+
+    // Отраженная точка
+    Point reflected = {2 * closest.x - p.x, 2 * closest.y - p.y};
+
+    return reflected;
+}
+
+// Проверяет, является ли прямая через точки a и b осью симметрии
+bool is_axis_of_symmetry(const vector<Point>& poly, const Point& a, const Point& b) {
+    int n = poly.size();
+    vector<bool> used(n, false);
+
+    for (int i = 0; i < n; i++) {
+        if (used[i]) continue;
+
+        Point reflected = reflect_point(poly[i], a, b);
+
+        // Ищем отраженную точку среди неиспользованных точек
+        bool found = false;
+        for (int j = 0; j < n; j++) {
+            if (!used[j] && points_equal(poly[j], reflected)) {
+                used[i] = used[j] = true;
+                found = true;
+                break;
+            }
+        }
+
+        // Если не нашли, возможно точка лежит на оси
+        if (!found) {
+            // Проверяем, лежит ли точка poly[i] на прямой a-b
+            // Это делаем через векторное произведение
+            double cross = (b.x - a.x) * (poly[i].y - a.y) -
+                          (b.y - a.y) * (poly[i].x - a.x);
+            if (fabs(cross) < EPS) {
+                used[i] = true;
+            } else {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+int main() {
+    SetConsoleOutputCP(1251);
+    int n;
+    cout << "Введите количество вершин: ";
+    cin >> n;
+
+    vector<Point> poly(n);
+    cout << "Введите координаты вершин (x y):\n";
+    for (int i = 0; i < n; i++) {
+        cin >> poly[i].x >> poly[i].y;
+    }
+
+    // 1. Проверяем оси через две вершины
+    for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+            if (is_axis_of_symmetry(poly, poly[i], poly[j])) {
+                cout << "Ось симметрии найдена!\n";
+                cout << "Точка 1: (" << poly[i].x << ", " << poly[i].y << ")\n";
+                cout << "Точка 2: (" << poly[j].x << ", " << poly[j].y << ")\n";
+                return 0;
+            }
+        }
+    }
+
+    // 2. Проверяем оси через вершину и середину ребра
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            int next_j = (j + 1) % n;
+            Point mid = {(poly[j].x + poly[next_j].x) / 2,
+                        (poly[j].y + poly[next_j].y) / 2};
+
+            if (is_axis_of_symmetry(poly, poly[i], mid)) {
+                cout << "Ось симметрии найдена!\n";
+                cout << "Точка 1: (" << poly[i].x << ", " << poly[i].y << ")\n";
+                cout << "Точка 2 (середина ребра): (" << mid.x << ", " << mid.y << ")\n";
+                return 0;
+            }
+        }
+    }
+
+    // 3. Проверяем оси через середины двух рёбер
+    for (int i = 0; i < n; i++) {
+        int next_i = (i + 1) % n;
+        Point mid1 = {(poly[i].x + poly[next_i].x) / 2,
+                     (poly[i].y + poly[next_i].y) / 2};
+
+        for (int j = i + 1; j < n; j++) {
+            int next_j = (j + 1) % n;
+            Point mid2 = {(poly[j].x + poly[next_j].x) / 2,
+                         (poly[j].y + poly[next_j].y) / 2};
+
+            if (is_axis_of_symmetry(poly, mid1, mid2)) {
+                cout << "Ось симметрии найдена!\n";
+                cout << "Точка 1 (середина ребра " << i << "-" << next_i << "): ("
+                     << mid1.x << ", " << mid1.y << ")\n";
+                cout << "Точка 2 (середина ребра " << j << "-" << next_j << "): ("
+                     << mid2.x << ", " << mid2.y << ")\n";
+                return 0;
+            }
+        }
+    }
+
+    cout << "Ось симметрии не найдена\n";
+    return 0;
+}
