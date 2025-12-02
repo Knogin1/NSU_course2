@@ -1,0 +1,29 @@
+#include <string>
+#include <algorithm>
+#include <cctype> // для std::tolower
+
+bool AreAnagrams(const std::string& str1, const std::string& str2) {
+    // Если длины разные, это не анаграммы
+    if (str1.length() != str2.length()) {
+        return false;
+    }
+    
+    // Создаем копии строк в нижнем регистре
+    std::string lower1 = str1;
+    std::string lower2 = str2;
+    
+    // Приводим к нижнему регистру
+    for (char& c : lower1) {
+        c = std::tolower(c);
+    }
+    for (char& c : lower2) {
+        c = std::tolower(c);
+    }
+    
+    // Сортируем символы в каждой строке
+    std::sort(lower1.begin(), lower1.end());
+    std::sort(lower2.begin(), lower2.end());
+    
+    // Если отсортированные строки равны, это анаграммы
+    return lower1 == lower2;
+}
