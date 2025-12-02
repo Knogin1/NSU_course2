@@ -1,0 +1,45 @@
+#include <iostream>
+#include <string>
+
+// Обычная функция для поиска n-го вхождения символа
+int findNthOccurrence(const std::string& str, char ch, int n) {
+    int count = 0;
+    for (int i = 0; i < str.length(); i++) {
+        if (str[i] == ch) {
+            count++;
+            if (count == n) {
+                return i;
+            }
+        }
+    }
+    return -1;  // если не нашли
+}
+
+// Класс-обёртка для перегрузки оператора
+class CharFinder {
+private:
+    std::string str;
+
+public:
+    CharFinder(const std::string& s) : str(s) {}
+
+    // Перегружаем оператор () для поиска
+    int operator()(char ch, int n) const {
+        return findNthOccurrence(str, ch, n);
+    }
+};
+
+int main() {
+    // Пример использования обычной функции
+    std::cout << findNthOccurrence("aefeatet", 't', 1) << std::endl;  // 5
+    std::cout << findNthOccurrence("aefeatet", 't', 2) << std::endl;  // 7
+    std::cout << findNthOccurrence("aefeatet", 't', 4) << std::endl;  // -1
+
+    // Пример использования перегруженного оператора
+    CharFinder f("aefeatet");
+    std::cout << f('t', 1) << std::endl;  // 5
+    std::cout << f('t', 2) << std::endl;  // 7
+    std::cout << f('t', 4) << std::endl;  // -1
+
+    return 0;
+}
