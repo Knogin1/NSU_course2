@@ -1,0 +1,26 @@
+#include <vector>
+#include <string>
+#include <algorithm>
+
+std::vector<std::string> SplitInWords(const std::string& s) {
+    std::vector<std::string> words;
+    auto start_it = s.begin();
+    
+    while (start_it != s.end()) {
+        // Ищем следующий пробел, начиная с текущей позиции
+        auto space_it = std::find(start_it, s.end(), ' ');
+        
+        // Создаем слово от start_it до space_it
+        words.emplace_back(start_it, space_it);
+        
+        // Если пробел найден, продолжаем со следующего символа
+        // Иначе выходим из цикла
+        if (space_it != s.end()) {
+            start_it = std::next(space_it);
+        } else {
+            break;
+        }
+    }
+    
+    return words;
+}
