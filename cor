@@ -1,122 +1,120 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA
 
-
-def decorrelate(xy):
-    # Вычисляем средние значения и стандартные отклонения
+def decorrelate_pca(xy):
+    # Центрируем данные
     mean_x = np.mean(xy[:, 0])
     mean_y = np.mean(xy[:, 1])
-    std_x = np.std(xy[:, 0])
-    std_y = np.std(xy[:, 1])
-
+    centered = xy - np.array([mean_x, mean_y])
     
-    # Нормализуем данные
-    x_norm = (xy[:, 0] - mean_x) / std_x
-    y_norm = (xy[:, 1] - mean_y) / std_y
-    normalized = np.column_stack((x_norm, y_norm))
+    # Вычисляем ковариационную матрицу
+    cov_matrix = np.cov(centered.T)
     
-    # Матрица поворота на π/4
-    theta = np.pi / 4
-    cos_theta = np.cos(theta)
-    sin_theta = np.sin(theta)
-    rotation_matrix = np.array([[cos_theta, -sin_theta],
-                                [sin_theta, cos_theta]])
+    # Находим собственные векторы и значения
+    eigenvalues, eigenvectors = np.linalg.eig(cov_matrix)
     
-    # Применяем поворот
-    xieta = normalized @ rotation_matrix.T
-
+    # Сортируем по убыванию собственных значений
+    idx = eigenvalues.argsort()[::-1]
+    eigenvalues = eigenvalues[idx]
+    eigenvectors = eigenvectors[:, idx]
+    
+    # Применяем преобразование
+    xieta = centered @ eigenvectors
+    
     # Определяем прямую трансформацию
     def direct(xy_input):
-        x_norm_d = (xy_input[:, 0] - mean_x) / std_x
-        y_norm_d = (xy_input[:, 1] - mean_y) / std_y
-        normalized_d = np.column_stack((x_norm_d, y_norm_d))
-        return normalized_d @ rotation_matrix.T
+        centered_input = xy_input - np.array([mean_x, mean_y])
+        return centered_input @ eigenvectors
     
     # Определяем обратную трансформацию
     def inverse(xieta_input):
-        # Обратный поворот (транспонированная матрица)
-        normalized_i = xieta_input @ rotation_matrix
-        x_orig = normalized_i[:, 0] * std_x + mean_x
-        y_orig = normalized_i[:, 1] * std_y + mean_y
-        return np.column_stack((x_orig, y_orig))
+        centered_back = xieta_input @ eigenvectors.T
+        return centered_back + np.array([mean_x, mean_y])
     
-    return (xieta, direct, inverse)
+    # Возвращаем также mean, eigenvectors и eigenvalues для визуализации
+    return xieta, direct, inverse, np.array([mean_x, mean_y]), eigenvectors, eigenvalues
 
-
-def plot(data, new_data):
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
+def plot(data: np.ndarray, new_data: np.ndarray, mean=None, eigenvectors=None, eigenvalues=None):
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
     
-    '''
-    mean_x = np.mean(xy[:, 0])
-    mean_y = np.mean(xy[:, 1])
-    X = (xy[:, 0] - mean_x) 
-    Y = (xy[:, 1] - mean_y)
-    K = np.multiply.outer(X, Y)
-    #eigenvalues, eigenvectors = np.linalg.eig(A)
-    e1,e = np.linalg.eig(K)
-    e1 = np.sqrt(e1)
-    e = e/e1
-    #print(e)
-    
-    '''
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(data)
-
-    pca = PCA() # или n_components=3 для 3D
-    print(pca.components_)
-    print(pca)
-    principal_components = pca.fit_transform(X_scaled)
-    #print(principal_components[:, 0])
-    en1, ev1 = np.linalg.eig(principal_components)
-    #print(ev1)
-    '''
-    '''
-    en1 = np.sqrt(en1)
-    ev1[0] = ev1[0] / en1
-   # ev2 /= np.sqrt(en2)
-    
-    
-    plt.figure(figsize=(8, 6))
-    plt.scatter(principal_components[:, 0], principal_components[:, 1])
-    plt.xlabel('Первая главная компонента')
-    plt.ylabel('Вторая главная компонента')
-    plt.title('Визуализация данных после PCA')
-    plt.grid(True)
-
-    #print(principal_components[:, 0])
-    #print( principal_components[:, 1])
-
-        
     # Первая диаграмма - исходные данные
-    ax1.scatter(data[:, 0], data[:, 1])
+    ax1.scatter(data[:, 0], data[:, 1], alpha=0.6, s=50, color='blue')
     ax1.set_xlabel('x')
     ax1.set_ylabel('y')
-    ax1.set_title('Исходные данные')
-    ax1.grid(True)
+    ax1.set_title('Исходные данные с собственными векторами PCA')
+    ax1.grid(True, alpha=0.3)
+    
+    # Если переданы собственные векторы и значения, рисуем их
+    if mean is not None and eigenvectors is not None and eigenvalues is not None:
+        # Масштабируем собственные векторы на корень из собственных значений
+        for i in range(2):
+            # Вычисляем вектор (масштабированный собственный вектор)
+            vec = eigenvectors[:, i] * np.sqrt(eigenvalues[i])
+            
+            # Начало вектора - среднее значение
+            start = mean
+            
+            # Конец вектора
+            end = mean + vec
+            
+            # Рисуем вектор (черный цвет)
+            ax1.arrow(start[0], start[1], 
+                     vec[0], vec[1], 
+                     head_width=0.2, head_length=0.3, 
+                     fc='black', ec='black', 
+                     linewidth=2, alpha=0.8,
+                     label=f'PC{i+1} (λ={eigenvalues[i]:.2f})')
+            
+            # Рисуем также линию без стрелки для видимости
+            ax1.plot([start[0], end[0]], [start[1], end[1]], 
+                    'k--', alpha=0.5)
+        
+        ax1.legend(loc='best')
     
     # Вторая диаграмма - преобразованные данные
-    ax2.scatter(new_data[:, 0], new_data[:, 1])
-    ax2.set_xlabel('xi')
-    ax2.set_ylabel('eta')
-    ax2.set_title('Преобразованные данные')
-    ax2.grid(True)
+    ax2.scatter(new_data[:, 0], new_data[:, 1], alpha=0.6, s=50, color='green')
+    ax2.set_xlabel('ξ (Первая главная компонента)')
+    ax2.set_ylabel('η (Вторая главная компонента)')
+    ax2.set_title('Преобразованные данные (после PCA)')
+    ax2.grid(True, alpha=0.3)
+    
+    # Добавляем линии через начало координат
+    ax2.axhline(y=0, color='gray', linestyle='--', alpha=0.5)
+    ax2.axvline(x=0, color='gray', linestyle='--', alpha=0.5)
+    
+    # Устанавливаем равные масштабы по осям для правильного отображения поворота
+    ax1.axis('equal')
+    ax2.axis('equal')
     
     plt.tight_layout()
-    plt.savefig('scatter.png')
-    #plt.close()
     plt.show()
 
-
-# Создаем тестовые данные
-N = 100
-x = np.random.normal(0, 1, N)
-y = x + np.random.normal(0, 0.5, N)  # Создаем корреляцию
-xy = np.column_stack((x, y))
-
-# Применяем преобразование
-xieta, direct, inverse = decorrelate(xy)
-
-plot(xy,xieta)
-
+# Пример использования с проверкой декореляции
+if __name__ == "__main__":
+    # Создаем коррелированные данные
+    np.random.seed(42)
+    N = 100
+    x = np.random.normal(0, 1, N)
+    y = 0.7 * x + np.random.normal(0, 0.5, N)  # Создаем корреляцию
+    xy = np.column_stack((x, y))
+    
+    # Применяем PCA
+    xieta, direct, inverse, mean_vec, eigenvectors, eigenvalues = decorrelate_pca(xy)
+    
+    # Проверяем корреляцию
+    correlation_before = np.corrcoef(xy[:, 0], xy[:, 1])[0, 1]
+    correlation_after = np.corrcoef(xieta[:, 0], xieta[:, 1])[0, 1]
+    print(f"Корреляция до PCA: {correlation_before:.6f}")
+    print(f"Корреляция после PCA: {correlation_after:.6f}")
+    
+    # Проверяем, что новые оси ортогональны (скалярное произведение векторов близко к 0)
+    dot_product = np.dot(eigenvectors[:, 0], eigenvectors[:, 1])
+    print(f"Ортогональность собственных векторов: {dot_product:.6f}")
+    
+    # Проверяем обратимость
+    xy_reconstructed = inverse(xieta)
+    error = np.max(np.abs(xy - xy_reconstructed))
+    print(f"Ошибка восстановления: {error:.6e}")
+    
+    # Строим графики с векторами
+    plot(xy, xieta, mean_vec, eigenvectors, eigenvalues)
