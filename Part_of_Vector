@@ -1,0 +1,24 @@
+#include <iostream>
+#include <vector>
+#include <algorithm>
+
+void PrintVectorPart(const std::vector<int>& numbers, std::ostream& os = std::cout) {
+    // Находим индекс первого отрицательного числа
+    size_t first_negative_index = numbers.size();  // по умолчанию - конец вектора
+    for (size_t i = 0; i < numbers.size(); ++i) {
+        if (numbers[i] < 0) {
+            first_negative_index = i;
+            break;
+        }
+    }
+    
+    // Выводим числа в обратном порядке до первого отрицательного
+    bool first = true;  // флаг для первого числа (чтобы не ставить лишний пробел)
+    for (size_t i = first_negative_index; i > 0; --i) {
+        if (!first) {
+            os << " ";
+        }
+        os << numbers[i - 1];
+        first = false;
+    }
+}
