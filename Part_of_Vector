@@ -1,24 +1,96 @@
 #include <iostream>
-#include <vector>
-#include <algorithm>
+#include <algorithm> // для std::reverse
 
-void PrintVectorPart(const std::vector<int>& numbers, std::ostream& os = std::cout) {
-    // Находим индекс первого отрицательного числа
-    size_t first_negative_index = numbers.size();  // по умолчанию - конец вектора
-    for (size_t i = 0; i < numbers.size(); ++i) {
-        if (numbers[i] < 0) {
-            first_negative_index = i;
-            break;
+class SimpleVector {
+private:
+    int** data;         // массив указателей
+    size_t capacity;    // размер выделенной памяти
+    size_t currentSize; // текущее количество элементов
+
+    // Увеличение помяти
+    void resize() {
+        capacity = (capacity == 0) ? 1 : capacity * 2;
+        int** newData = new int*[capacity];
+
+        for (size_t i = 0; i < currentSize; ++i) {
+            newData[i] = data[i];
+        }
+
+        delete[] data;
+        data = newData;
+    }
+
+public:
+    // Конструктор
+    SimpleVector() : data(nullptr), capacity(0), currentSize(0) {}
+
+    // Деструктор
+    ~SimpleVector() {
+        reset();
+    }
+
+    //Получение текущего размера
+    size_t size() const {
+        return currentSize;
+    }
+
+    // Добавление элемента
+    void add(int* element) {
+        if (currentSize >= capacity) {
+            resize();
+        }
+        data[currentSize++] = element;
+    }
+
+    // Очистка контейнера
+    void reset() {
+        for (size_t i = 0; i < currentSize; ++i) {
+            delete data[i];     // удаляем сам int
+        }
+        delete[] data;          // удаляем массив указателей
+
+        data = nullptr;
+        capacity = 0;
+        currentSize = 0;
+    }
+
+    // Разворот порядка элементов
+    void reverse() {
+        for (size_t i = 0; i < currentSize / 2; ++i) {
+            std::swap(data[i], data[currentSize - i - 1]);
         }
     }
-    
-    // Выводим числа в обратном порядке до первого отрицательного
-    bool first = true;  // флаг для первого числа (чтобы не ставить лишний пробел)
-    for (size_t i = first_negative_index; i > 0; --i) {
-        if (!first) {
-            os << " ";
+
+    // Вывод
+    void print() const {
+        for (size_t i = 0; i < currentSize; ++i) {
+            if (data[i] != nullptr) {
+                std::cout << *data[i] << " ";
+            } else {
+                std::cout << "null ";
+            }
         }
-        os << numbers[i - 1];
-        first = false;
+        std::cout << std::endl;
     }
+};
+
+int main() {
+    SimpleVector vec;
+
+    // Добавляем элементы
+    for (int i = 0; i < 5; ++i) {
+        vec.add(new int(i));
+    }
+
+    vec.print();
+    std::cout << "Size: " << vec.size() << std::endl;
+
+    vec.reverse();
+    std::cout << "Reverse: ";
+    vec.print();
+
+    vec.reset();
+    std::cout << "Reset\nSize: " << vec.size() << std::endl;
+
+    return 0;
 }
