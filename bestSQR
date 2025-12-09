@@ -1,0 +1,108 @@
+#include <iostream>
+#include <vector>
+#include <map>
+#include <utility>
+#include <iomanip>
+
+// Объявления
+template<typename T>
+void Sqr(T& value);
+
+template<typename T>
+void Sqr(std::vector<T>& vec);
+
+template<typename First, typename Second>
+void Sqr(std::pair<First, Second>& p);
+
+template<typename Key, typename Value>
+void Sqr(std::map<Key, Value>& m);
+
+// Реализации
+// Для чисел
+template<typename T>
+void Sqr(T& value) {
+    value *= value;
+}
+
+// Для векторов
+template<typename T>
+void Sqr(std::vector<T>& vec) {
+    for (auto& item : vec) {
+        Sqr(item);
+    }
+}
+
+// Для пар
+template<typename First, typename Second>
+void Sqr(std::pair<First, Second>& p) {
+    Sqr(p.first);
+    Sqr(p.second);
+}
+
+// Для map
+template<typename Key, typename Value>
+void Sqr(std::map<Key, Value>& m) {
+    for (auto& [key, value] : m) {
+        Sqr(value);
+    }
+}
+
+// вывод map
+template<typename Key, typename Value>
+void printMap(const std::map<Key, Value>& m) {
+    std::cout << "{ ";
+    for (const auto& [key, value] : m) {
+        std::cout << key << ":" << value << " ";
+    }
+    std::cout << "}";
+}
+
+// вывод вектора
+template<typename T>
+void printVector(const std::vector<T>& v) {
+    std::cout << "{ ";
+    for (const auto& item : v) {
+        std::cout << item << " ";
+    }
+    std::cout << "}";
+}
+
+// вывод пары
+template<typename First, typename Second>
+void printPair(const std::pair<First, Second>& p) {
+    std::cout << "{" << p.first << ", " << p.second << "}";
+}
+
+int main() {
+   // std::cout << std::fixed << std::setprecision(1);
+
+    int x = 5;
+    std::cout << x;
+    Sqr(x);
+    std::cout << " => " << x;
+
+    std::cout << "\n" << std::endl;
+
+    std::vector<int> v = {1, 2, 3, 4};
+    printVector(v);
+    Sqr(v);
+    std::cout << " => ";
+    printVector(v);
+
+    std::cout << "\n" << std::endl;
+
+    std::pair<int, double> p = {2, 6};
+    printPair(p);
+    Sqr(p);
+    std::cout << " => ";
+    printPair(p);
+
+    std::cout << "\n" << std::endl;
+
+    std::map<int, int> m = {{1, 2}, {3, 4}, {5, 6}};
+    printMap(m);
+    Sqr(m);
+    std::cout << " => ";
+    printMap(m);
+    std::cout << "\n" << std::endl;
+}
