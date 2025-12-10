@@ -1,207 +1,225 @@
 #include <iostream>
 #include <vector>
-#include <cmath>
 #include <random>
+#include <cmath>
 #include <algorithm>
 #include <numeric>
+#include <tuple>
 
-// Структура для хранения точки
-struct Point {
-    double x, y;
-};
+// Используем std::pair для хранения точек
+using Point = std::pair<double, double>;
+using CircleParams = std::tuple<double, double, double>; // (x_center, y_center, radius)
 
-// Функция для вычисления расстояния от точки до центра окружности
-double distance(double x, double y, double a, double b) {
-    return std::hypot(x - a, y - b);
-}
-
-// Функция для вычисления невязок (расстояние^2 - R^2)
-std::vector<double> compute_residuals(const std::vector<Point>& points, double a, double b, double R) {
-    std::vector<double> residuals;
-    residuals.reserve(points.size());
-    double R2 = R * R;
-    
-    for (const auto& p : points) {
-        double dx = p.x - a;
-        double dy = p.y - b;
-        double dist2 = dx * dx + dy * dy;
-        residuals.push_back(dist2 - R2);
-    }
-    
-    return residuals;
-}
-
-// Функция для вычисления Якобиана
-std::vector<std::vector<double>> compute_jacobian(const std::vector<Point>& points, double a, double b, double R) {
-    std::vector<std::vector<double>> J(points.size(), std::vector<double>(3));
-    
-    for (size_t i = 0; i < points.size(); ++i) {
-        double dx = points[i].x - a;
-        double dy = points[i].y - b;
-        
-        // Производные по параметрам (a, b, R)
-        J[i][0] = -2.0 * dx;  // ∂r/∂a
-        J[i][1] = -2.0 * dy;  // ∂r/∂b
-        J[i][2] = -2.0 * R;   // ∂r/∂R
-    }
-    
-    return J;
-}
-
-// Метод Гаусса-Ньютона для решения задачи наименьших квадратов
-void gauss_newton(const std::vector<Point>& points, double& a, double& b, double& R, 
-                  int max_iter = 100, double tol = 1e-6) {
-    
-    for (int iter = 0; iter < max_iter; ++iter) {
-        // Вычисляем невязки
-        auto residuals = compute_residuals(points, a, b, R);
-        
-        // Вычисляем Якобиан
-        auto J = compute_jacobian(points, a, b, R);
-        
-        // Строим систему нормальных уравнений: J^T * J * delta = -J^T * r
-        std::vector<std::vector<double>> JTJ(3, std::vector<double>(3, 0.0));
-        std::vector<double> JTr(3, 0.0);
-        
-        // Вычисляем J^T * J и J^T * r
-        for (size_t i = 0; i < points.size(); ++i) {
-            for (int k = 0; k < 3; ++k) {
-                JTr[k] += J[i][k] * residuals[i];
-                for (int l = 0; l < 3; ++l) {
-                    JTJ[k][l] += J[i][k] * J[i][l];
-                }
-            }
-        }
-        
-        // Решаем систему линейных уравнений методом Гаусса
-        // Приводим матрицу к верхнетреугольному виду
-        for (int k = 0; k < 3; ++k) {
-            // Нормализация строки
-            double diag = JTJ[k][k];
-            if (std::abs(diag) < 1e-12) {
-                // Добавляем регуляризацию для устойчивости
-                JTJ[k][k] += 1e-6;
-                diag = JTJ[k][k];
-            }
-            
-            for (int j = k; j < 3; ++j) {
-                JTJ[k][j] /= diag;
-            }
-            JTr[k] /= diag;
-            
-            // Исключение переменной
-            for (int i = k + 1; i < 3; ++i) {
-                double factor = JTJ[i][k];
-                for (int j = k; j < 3; ++j) {
-                    JTJ[i][j] -= factor * JTJ[k][j];
-                }
-                JTr[i] -= factor * JTr[k];
-            }
-        }
-        
-        // Обратный ход метода Гаусса
-        std::vector<double> delta(3, 0.0);
-        for (int k = 2; k >= 0; --k) {
-            delta[k] = JTr[k];
-            for (int j = k + 1; j < 3; ++j) {
-                delta[k] -= JTJ[k][j] * delta[j];
-            }
-        }
-        
-        // Обновляем параметры
-        a -= delta[0];
-        b -= delta[1];
-        R -= delta[2];
-        
-        // Проверяем критерий остановки
-        double norm = std::sqrt(delta[0]*delta[0] + delta[1]*delta[1] + delta[2]*delta[2]);
-        if (norm < tol) {
-            std::cout << "Сходимость достигнута на итерации " << iter + 1 << std::endl;
-            break;
-        }
-    }
-}
-
-// Функция для генерации случайных точек вокруг единичной окружности
-std::vector<Point> generate_points_around_unit_circle(int n, double noise_level = 0.1) {
-    std::vector<Point> points;
-    points.reserve(n);
-    
+// Генерация точек вокруг единичной окружности с небольшим отклонением
+std::vector<Point> generatePoints(int num_points, double noise_std = 0.1) {
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_real_distribution<double> angle_dist(0.0, 2.0 * M_PI);
-    std::normal_distribution<double> noise_dist(0.0, noise_level);
+    std::normal_distribution<> noise_dist(0.0, noise_std);
+    std::uniform_real_distribution<> angle_dist(0.0, 2 * M_PI);
     
-    for (int i = 0; i < n; ++i) {
+    std::vector<Point> points;
+    points.reserve(num_points);
+    
+    for (int i = 0; i < num_points; ++i) {
         double angle = angle_dist(gen);
-        double noise_r = noise_dist(gen);
+        double radius = 1.0 + noise_dist(gen);
         
-        // Генерируем точку на расстоянии 1 + шум
-        double r = 1.0 + noise_r;
-        points.push_back({r * std::cos(angle), r * std::sin(angle)});
+        double x = radius * cos(angle);
+        double y = radius * sin(angle);
+        
+        points.emplace_back(x, y);
     }
     
     return points;
 }
 
 // Функция для вычисления среднеквадратичного отклонения
-double compute_mse(const std::vector<Point>& points, double a, double b, double R) {
-    double sum_sq_error = 0.0;
+double computeLoss(const std::vector<Point>& points, double xc, double yc, double R) {
+    double loss = 0.0;
+    for (const auto& [x, y] : points) {
+        double dx = x - xc;
+        double dy = y - yc;
+        double distance = std::sqrt(dx*dx + dy*dy);
+        double diff = distance - R;
+        loss += diff * diff;
+    }
+    return loss / points.size();
+}
+
+// Градиент функции потерь
+std::tuple<double, double, double> computeGradient(
+    const std::vector<Point>& points, 
+    double xc, double yc, double R) {
     
-    for (const auto& p : points) {
-        double dist = distance(p.x, p.y, a, b);
-        double error = dist - R;
-        sum_sq_error += error * error;
+    double grad_xc = 0.0;
+    double grad_yc = 0.0;
+    double grad_R = 0.0;
+    size_t n = points.size();
+    
+    for (const auto& [x, y] : points) {
+        double dx = x - xc;
+        double dy = y - yc;
+        double distance = std::sqrt(dx*dx + dy*dy);
+        
+        if (distance > 1e-10) {  // избегаем деления на ноль
+            double factor = 2.0 * (distance - R) / distance;
+            grad_xc += factor * dx;
+            grad_yc += factor * dy;
+        }
+        grad_R += -2.0 * (distance - R);
     }
     
-    return sum_sq_error / points.size();
+    return {grad_xc / n, grad_yc / n, grad_R / n};
+}
+
+// Метод Ньютона для оптимизации
+CircleParams newtonMethod(const std::vector<Point>& points, 
+                         double xc0, double yc0, double R0,
+                         int max_iterations = 1000, 
+                         double tolerance = 1e-8) {
+    
+    double xc = xc0;
+    double yc = yc0;
+    double R = R0;
+    
+    for (int iter = 0; iter < max_iterations; ++iter) {
+        // Вычисляем градиент
+        auto [grad_x, grad_y, grad_R] = computeGradient(points, xc, yc, R);
+        
+        // Простой шаг градиентного спуска (упрощенная версия метода Ньютона)
+        // В полном методе Ньютона здесь должна быть матрица Гессе
+        double learning_rate = 0.1;
+        
+        double xc_new = xc - learning_rate * grad_x;
+        double yc_new = yc - learning_rate * grad_y;
+        double R_new = R - learning_rate * grad_R;
+        
+        // Проверяем сходимость
+        double dx = xc_new - xc;
+        double dy = yc_new - yc;
+        double dR = R_new - R;
+        
+        if (dx*dx + dy*dy + dR*dR < tolerance * tolerance) {
+            break;
+        }
+        
+        xc = xc_new;
+        yc = yc_new;
+        R = R_new;
+        
+        // Можно добавить вычисление и использование матрицы Гессе для настоящего метода Ньютона
+        // но это требует вычисления вторых производных
+    }
+    
+    return {xc, yc, R};
+}
+
+// Альтернативный метод: используем аналитическое решение для начального приближения
+CircleParams fitCircleAnalytical(const std::vector<Point>& points) {
+    size_t n = points.size();
+    
+    // Вычисляем среднее для использования в качестве начального центра
+    double sum_x = 0.0, sum_y = 0.0;
+    for (const auto& [x, y] : points) {
+        sum_x += x;
+        sum_y += y;
+    }
+    
+    double xc0 = sum_x / n;
+    double yc0 = sum_y / n;
+    
+    // Вычисляем средний радиус как начальное приближение
+    double sum_r = 0.0;
+    for (const auto& [x, y] : points) {
+        double dx = x - xc0;
+        double dy = y - yc0;
+        sum_r += std::sqrt(dx*dx + dy*dy);
+    }
+    double R0 = sum_r / n;
+    
+    return newtonMethod(points, xc0, yc0, R0);
+}
+
+// Метод наименьших квадратов для более точного начального приближения
+CircleParams fitCircleLeastSquares(const std::vector<Point>& points) {
+    size_t n = points.size();
+    
+    double sum_x = 0.0, sum_y = 0.0;
+    double sum_x2 = 0.0, sum_y2 = 0.0, sum_xy = 0.0;
+    double sum_x3 = 0.0, sum_y3 = 0.0, sum_x2y = 0.0, sum_xy2 = 0.0;
+    
+    for (const auto& [x, y] : points) {
+        double x2 = x * x;
+        double y2 = y * y;
+        double xy = x * y;
+        
+        sum_x += x;
+        sum_y += y;
+        sum_x2 += x2;
+        sum_y2 += y2;
+        sum_xy += xy;
+        sum_x3 += x2 * x;
+        sum_y3 += y2 * y;
+        sum_x2y += x2 * y;
+        sum_xy2 += x * y2;
+    }
+    
+    double C = n * sum_x2 - sum_x * sum_x;
+    double D = n * sum_xy - sum_x * sum_y;
+    double E = n * sum_x3 + n * sum_xy2 - (sum_x2 + sum_y2) * sum_x;
+    double G = n * sum_y2 - sum_y * sum_y;
+    double H = n * sum_x2y + n * sum_y3 - (sum_x2 + sum_y2) * sum_y;
+    
+    double denominator = 2 * (C * G - D * D);
+    if (std::abs(denominator) < 1e-10) {
+        return fitCircleAnalytical(points);
+    }
+    
+    double xc = (E * G - D * H) / denominator;
+    double yc = (C * H - D * E) / denominator;
+    
+    // Вычисляем радиус
+    double sum_r2 = 0.0;
+    for (const auto& [x, y] : points) {
+        double dx = x - xc;
+        double dy = y - yc;
+        sum_r2 += dx*dx + dy*dy;
+    }
+    double R = std::sqrt(sum_r2 / n);
+    
+    return {xc, yc, R};
 }
 
 int main() {
-    // Генерируем точки
-    int n_points = 100;
-    auto points = generate_points_around_unit_circle(n_points);
+    // Генерация точек
+    int num_points = 100;
+    auto points = generatePoints(num_points, 0.1);
     
-    // Начальное приближение: используем среднее координат как центр,
-    // и среднее расстояние как радиус
-    double sum_x = 0.0, sum_y = 0.0;
-    for (const auto& p : points) {
-        sum_x += p.x;
-        sum_y += p.y;
+    std::cout << "Сгенерировано " << points.size() << " точек\n";
+    
+    // Метод 1: Аналитическое начальное приближение + оптимизация
+    auto [xc1, yc1, R1] = fitCircleAnalytical(points);
+    double loss1 = computeLoss(points, xc1, yc1, R1);
+    
+    std::cout << "\nМетод 1 (аналитический + оптимизация):\n";
+    std::cout << "Центр: (" << xc1 << ", " << yc1 << ")\n";
+    std::cout << "Радиус: " << R1 << "\n";
+    std::cout << "Среднеквадратичное отклонение: " << loss1 << "\n";
+    
+    // Метод 2: Метод наименьших квадратов + оптимизация
+    auto [xc2, yc2, R2] = fitCircleLeastSquares(points);
+    double loss2 = computeLoss(points, xc2, yc2, R2);
+    
+    std::cout << "\nМетод 2 (наименьшие квадраты + оптимизация):\n";
+    std::cout << "Центр: (" << xc2 << ", " << yc2 << ")\n";
+    std::cout << "Радиус: " << R2 << "\n";
+    std::cout << "Среднеквадратичное отклонение: " << loss2 << "\n";
+    
+    // Выводим некоторые точки для проверки
+    std::cout << "\nПервые 5 точек:\n";
+    for (int i = 0; i < 5 && i < points.size(); ++i) {
+        std::cout << "(" << points[i].first << ", " << points[i].second << ")\n";
     }
-    
-    double a0 = sum_x / n_points;
-    double b0 = sum_y / n_points;
-    
-    // Вычисляем среднее расстояние до центра для начального радиуса
-    double sum_dist = 0.0;
-    for (const auto& p : points) {
-        sum_dist += distance(p.x, p.y, a0, b0);
-    }
-    double R0 = sum_dist / n_points;
-    
-    std::cout << "Начальное приближение:" << std::endl;
-    std::cout << "Центр: (" << a0 << ", " << b0 << ")" << std::endl;
-    std::cout << "Радиус: " << R0 << std::endl;
-    std::cout << "Среднеквадратичное отклонение: " 
-              << compute_mse(points, a0, b0, R0) << std::endl;
-    
-    // Применяем метод Гаусса-Ньютона
-    double a = a0, b = b0, R = R0;
-    gauss_newton(points, a, b, R);
-    
-    std::cout << "\nПосле оптимизации:" << std::endl;
-    std::cout << "Центр: (" << a << ", " << b << ")" << std::endl;
-    std::cout << "Радиус: " << R << std::endl;
-    std::cout << "Среднеквадратичное отклонение: " 
-              << compute_mse(points, a, b, R) << std::endl;
-    
-    // Идеальная окружность (для сравнения)
-    std::cout << "\nИдеальная единичная окружность:" << std::endl;
-    std::cout << "Центр: (0, 0)" << std::endl;
-    std::cout << "Радиус: 1.0" << std::endl;
-    std::cout << "Среднеквадратичное отклонение: " 
-              << compute_mse(points, 0, 0, 1.0) << std::endl;
     
     return 0;
 }
