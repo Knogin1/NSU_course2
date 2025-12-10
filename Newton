@@ -1,0 +1,207 @@
+#include <iostream>
+#include <vector>
+#include <cmath>
+#include <random>
+#include <algorithm>
+#include <numeric>
+
+// Структура для хранения точки
+struct Point {
+    double x, y;
+};
+
+// Функция для вычисления расстояния от точки до центра окружности
+double distance(double x, double y, double a, double b) {
+    return std::hypot(x - a, y - b);
+}
+
+// Функция для вычисления невязок (расстояние^2 - R^2)
+std::vector<double> compute_residuals(const std::vector<Point>& points, double a, double b, double R) {
+    std::vector<double> residuals;
+    residuals.reserve(points.size());
+    double R2 = R * R;
+    
+    for (const auto& p : points) {
+        double dx = p.x - a;
+        double dy = p.y - b;
+        double dist2 = dx * dx + dy * dy;
+        residuals.push_back(dist2 - R2);
+    }
+    
+    return residuals;
+}
+
+// Функция для вычисления Якобиана
+std::vector<std::vector<double>> compute_jacobian(const std::vector<Point>& points, double a, double b, double R) {
+    std::vector<std::vector<double>> J(points.size(), std::vector<double>(3));
+    
+    for (size_t i = 0; i < points.size(); ++i) {
+        double dx = points[i].x - a;
+        double dy = points[i].y - b;
+        
+        // Производные по параметрам (a, b, R)
+        J[i][0] = -2.0 * dx;  // ∂r/∂a
+        J[i][1] = -2.0 * dy;  // ∂r/∂b
+        J[i][2] = -2.0 * R;   // ∂r/∂R
+    }
+    
+    return J;
+}
+
+// Метод Гаусса-Ньютона для решения задачи наименьших квадратов
+void gauss_newton(const std::vector<Point>& points, double& a, double& b, double& R, 
+                  int max_iter = 100, double tol = 1e-6) {
+    
+    for (int iter = 0; iter < max_iter; ++iter) {
+        // Вычисляем невязки
+        auto residuals = compute_residuals(points, a, b, R);
+        
+        // Вычисляем Якобиан
+        auto J = compute_jacobian(points, a, b, R);
+        
+        // Строим систему нормальных уравнений: J^T * J * delta = -J^T * r
+        std::vector<std::vector<double>> JTJ(3, std::vector<double>(3, 0.0));
+        std::vector<double> JTr(3, 0.0);
+        
+        // Вычисляем J^T * J и J^T * r
+        for (size_t i = 0; i < points.size(); ++i) {
+            for (int k = 0; k < 3; ++k) {
+                JTr[k] += J[i][k] * residuals[i];
+                for (int l = 0; l < 3; ++l) {
+                    JTJ[k][l] += J[i][k] * J[i][l];
+                }
+            }
+        }
+        
+        // Решаем систему линейных уравнений методом Гаусса
+        // Приводим матрицу к верхнетреугольному виду
+        for (int k = 0; k < 3; ++k) {
+            // Нормализация строки
+            double diag = JTJ[k][k];
+            if (std::abs(diag) < 1e-12) {
+                // Добавляем регуляризацию для устойчивости
+                JTJ[k][k] += 1e-6;
+                diag = JTJ[k][k];
+            }
+            
+            for (int j = k; j < 3; ++j) {
+                JTJ[k][j] /= diag;
+            }
+            JTr[k] /= diag;
+            
+            // Исключение переменной
+            for (int i = k + 1; i < 3; ++i) {
+                double factor = JTJ[i][k];
+                for (int j = k; j < 3; ++j) {
+                    JTJ[i][j] -= factor * JTJ[k][j];
+                }
+                JTr[i] -= factor * JTr[k];
+            }
+        }
+        
+        // Обратный ход метода Гаусса
+        std::vector<double> delta(3, 0.0);
+        for (int k = 2; k >= 0; --k) {
+            delta[k] = JTr[k];
+            for (int j = k + 1; j < 3; ++j) {
+                delta[k] -= JTJ[k][j] * delta[j];
+            }
+        }
+        
+        // Обновляем параметры
+        a -= delta[0];
+        b -= delta[1];
+        R -= delta[2];
+        
+        // Проверяем критерий остановки
+        double norm = std::sqrt(delta[0]*delta[0] + delta[1]*delta[1] + delta[2]*delta[2]);
+        if (norm < tol) {
+            std::cout << "Сходимость достигнута на итерации " << iter + 1 << std::endl;
+            break;
+        }
+    }
+}
+
+// Функция для генерации случайных точек вокруг единичной окружности
+std::vector<Point> generate_points_around_unit_circle(int n, double noise_level = 0.1) {
+    std::vector<Point> points;
+    points.reserve(n);
+    
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<double> angle_dist(0.0, 2.0 * M_PI);
+    std::normal_distribution<double> noise_dist(0.0, noise_level);
+    
+    for (int i = 0; i < n; ++i) {
+        double angle = angle_dist(gen);
+        double noise_r = noise_dist(gen);
+        
+        // Генерируем точку на расстоянии 1 + шум
+        double r = 1.0 + noise_r;
+        points.push_back({r * std::cos(angle), r * std::sin(angle)});
+    }
+    
+    return points;
+}
+
+// Функция для вычисления среднеквадратичного отклонения
+double compute_mse(const std::vector<Point>& points, double a, double b, double R) {
+    double sum_sq_error = 0.0;
+    
+    for (const auto& p : points) {
+        double dist = distance(p.x, p.y, a, b);
+        double error = dist - R;
+        sum_sq_error += error * error;
+    }
+    
+    return sum_sq_error / points.size();
+}
+
+int main() {
+    // Генерируем точки
+    int n_points = 100;
+    auto points = generate_points_around_unit_circle(n_points);
+    
+    // Начальное приближение: используем среднее координат как центр,
+    // и среднее расстояние как радиус
+    double sum_x = 0.0, sum_y = 0.0;
+    for (const auto& p : points) {
+        sum_x += p.x;
+        sum_y += p.y;
+    }
+    
+    double a0 = sum_x / n_points;
+    double b0 = sum_y / n_points;
+    
+    // Вычисляем среднее расстояние до центра для начального радиуса
+    double sum_dist = 0.0;
+    for (const auto& p : points) {
+        sum_dist += distance(p.x, p.y, a0, b0);
+    }
+    double R0 = sum_dist / n_points;
+    
+    std::cout << "Начальное приближение:" << std::endl;
+    std::cout << "Центр: (" << a0 << ", " << b0 << ")" << std::endl;
+    std::cout << "Радиус: " << R0 << std::endl;
+    std::cout << "Среднеквадратичное отклонение: " 
+              << compute_mse(points, a0, b0, R0) << std::endl;
+    
+    // Применяем метод Гаусса-Ньютона
+    double a = a0, b = b0, R = R0;
+    gauss_newton(points, a, b, R);
+    
+    std::cout << "\nПосле оптимизации:" << std::endl;
+    std::cout << "Центр: (" << a << ", " << b << ")" << std::endl;
+    std::cout << "Радиус: " << R << std::endl;
+    std::cout << "Среднеквадратичное отклонение: " 
+              << compute_mse(points, a, b, R) << std::endl;
+    
+    // Идеальная окружность (для сравнения)
+    std::cout << "\nИдеальная единичная окружность:" << std::endl;
+    std::cout << "Центр: (0, 0)" << std::endl;
+    std::cout << "Радиус: 1.0" << std::endl;
+    std::cout << "Среднеквадратичное отклонение: " 
+              << compute_mse(points, 0, 0, 1.0) << std::endl;
+    
+    return 0;
+}
