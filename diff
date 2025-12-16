@@ -1,0 +1,51 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+Lx, Ly = 0.5, 0.5  # Размеры
+Nx, Ny = 50, 50    # Количество ячеек 
+dx, dy = Lx/Nx, Ly/Ny
+
+a = 0.1        
+dt = 0.01 * min(dx**2, dy**2) / (4 * a)
+
+T = np.zeros((Nx, Ny))
+
+source_size = 10
+center_x, center_y = Nx//2, Ny//2
+x_start, x_end = center_x - source_size//2, center_x + source_size//2
+y_start, y_end = center_y - source_size//2, center_y + source_size//2
+
+T[x_start:x_end, y_start:y_end] = 1000.0  #  Температура 
+
+# Параметры симуляции
+num_steps = 500
+
+# Основной цикл симуляции
+for step in range(num_steps):  
+    # Обновление температуры
+    for i in range(1, Nx-1):
+        for j in range(1, Ny-1):
+            # Пропускаем источники
+            if x_start <= i < x_end and y_start <= j < y_end:
+                continue
+                
+            d2T_dx2 = (T[i+1, j] - 2*T[i, j] + T[i-1, j]) / (dx**2)
+            d2T_dy2 = (T[i, j+1] - 2*T[i, j] + T[i, j-1]) / (dy**2)
+            
+            T[i, j] = T[i, j] + a * dt * (d2T_dx2 + d2T_dy2)
+    
+    T[0, :] = 100.0    # Лево
+    T[-1, :] = 100.0   # Право
+    T[:, 0] = 100.0    # Низ
+    T[:, -1] = 100.0   # Верх
+    
+
+im = plt.imshow(T.T, cmap='hot', origin='lower', 
+                    extent=[0, Lx, 0, Ly], vmin=0, vmax=1000)
+plt.xlabel('X (м)')
+plt.ylabel('Y (м)')
+plt.colorbar(im, label='Температура (°C)')
+
+plt.tight_layout()
+plt.show()
